@@ -64,10 +64,6 @@ class SynapseManager:
         if not user_id:
             return "Usuário não encontrado."
 
-        confirm = input(f"Você tem certeza que deseja desativar a conta do usuário {displayname}? (s/n): ")
-        if confirm.lower() != 's':
-            return "Operação cancelada."
-
         url = f"{self.base_url}/_synapse/admin/v1/deactivate/{user_id}"
         headers = self.get_headers()
         data = {'erase': True}
@@ -113,19 +109,13 @@ class SynapseManager:
         else:
             raise Exception("Falha ao alterar senha: " + response.json().get('error', 'Erro desconhecido'))
 
-    def test_login(self, username, password):
-        url = 'http://localhost:8008/_matrix/client/r0/login'
+    def get_access_token(self, username, password):
+        url = f'{self.base_url}/_matrix/client/r0/login'
         payload = {
             "type": "m.login.password",
             "user": username,
             "password": password
         }
         response = requests.post(url, json=payload)
-        if response.status_code == 200:
-            return "Login bem-sucedido.", response.json(), response.status_code
-        elif response.status_code == 403:
-            return "Senha incorreta.", response.json(), response.status_code
-        elif response.status_code == 404:
-            return "Usuário não encontrado.", response.json(), response.status_code
-        else:
-            return "Falha no login.", response.json(), response.status_code
+        data = response.json()
+        return data['access_token']

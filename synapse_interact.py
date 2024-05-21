@@ -1,7 +1,8 @@
 import argparse
-
 import config
+import matrix_interact
 from config import Config
+from synapse_manager import SynapseManager
 
 
 #  Gerência de usuários locais ok
@@ -22,8 +23,16 @@ from config import Config
 #
 # o Futuramente, criar
 
+def get_access_token(args):
+    config = Config.from_json_file()
+    return matrix_interact.get_access_token(config.base_url, config.user_name, config.password)
+
+
 def create_user(args):
-    print(f"Creating user with username: {args.username} and password: {args.password},admin {args.admin}")
+    config = Config.from_json_file()
+    print(args)
+    manager = SynapseManager(config.base_url, args.access_token, config.shared_secret)
+    print(manager.create_user(args.username, args.password, False if args.admin is None else args.admin))
 
 
 def generate_config(args):
@@ -32,7 +41,28 @@ def generate_config(args):
 
 
 def list_users(args):
-    pass
+    config = Config.from_json_file()
+    manager = SynapseManager(config.base_url, args.access_token, config.shared_secret)
+    print(manager.list_users())
+
+
+def list_rooms(args):
+    config = Config.from_json_file()
+    manager = SynapseManager(config.base_url, args.access_token, config.shared_secret)
+    print(manager.list_rooms())
+
+
+def deactivate(args):
+    config = Config.from_json_file()
+    manager = SynapseManager(config.base_url, args.access_token, config.shared_secret)
+    print(args)
+    print(manager.deactivate_user(args.username, False if args.erase is None else args.erase))
+
+
+def new_room(args):
+    config = Config.from_json_file()
+    manager = matrix_interact.MatrixManager(config.base_url, args.access_token, config.shared_secret)
+    print(manager.create_room(args.name, args.preset, args.alias,args.description))
 
 
 def main():
@@ -58,14 +88,35 @@ def main():
     create_parser.add_argument('-u', '--username', required=True, help="Enter your username")
     create_parser.add_argument('-p', '--password', required=True, help="Enter your password")
     create_parser.add_argument("-a", "--admin", action=argparse.BooleanOptionalAction, required=False, help="Is admin?")
+    create_parser.add_argument('-t', '--access_token', required=True, help="Enter your access Token")
     create_parser.set_defaults(func=create_user)
 
     list_users_parser = subparsers.add_parser('listusers', help='Create a new user')
+    list_users_parser.add_argument('-t', '--access_token', required=True, help="Enter your access Token")
     list_users_parser.set_defaults(func=list_users)
 
-    deactivate_user = subparsers.add_parser('deactivateuser', help='Deactivate an user')
-    deactivate_user.add_argument('-id', '--identifier', required=True, help="Enter the user id")
-    deactivate_user.set_defaults(func=deactivate_user)
+    remove_user = subparsers.add_parser('remove_user', help='Create a new user')
+    remove_user.add_argument('-u', '--username', required=True, help="Enter your username")
+    remove_user.add_argument("-e", "--erase", action=argparse.BooleanOptionalAction, required=False, help="Is admin?")
+    remove_user.add_argument('-t', '--access_token', required=True, help="Enter your access Token")
+    remove_user.set_defaults(func=deactivate)
+
+
+    login = subparsers.add_parser('login',
+                                  help='Generate your access token given the username and password on the config')
+    login.set_defaults(func=get_access_token)
+
+    list_room = subparsers.add_parser('listrooms', help='List all rooms ')
+    list_room.add_argument('-t', '--access_token', required=True, help="Enter your access Token")
+    list_room.set_defaults(func=list_rooms)
+
+    create_room = subparsers.add_parser('create_room', help='Create a new room')
+    create_room.add_argument('-n', '--name', required=True, help="Enter the room name")
+    create_room.add_argument('-p', '--preset', required=True, help="Enter the room preset")
+    create_room.add_argument('-d', '--description', required=True, help="Enter the description")
+    create_room.add_argument('-a', '--alias', required=True, help="Enter the alais")
+    create_room.add_argument('-t', '--access_token', required=True, help="Enter your access Token")
+    create_room.set_defaults(func=new_room)
 
     args = parser.parse_args()
 

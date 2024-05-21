@@ -58,7 +58,7 @@ class SynapseManager:
         else:
             raise Exception(f"Erro ao buscar usuários: {response.text}")
 
-    def deactivate_user(self, displayname):
+    def deactivate_user(self, displayname,erase:bool):
         user_id = self.get_user_id_by_displayname(displayname)
         print(f"User ID: {user_id}")
         if not user_id:
@@ -66,7 +66,7 @@ class SynapseManager:
 
         url = f"{self.base_url}/_synapse/admin/v1/deactivate/{user_id}"
         headers = self.get_headers()
-        data = {'erase': True}
+        data = {'erase': erase}
         response = requests.post(url, headers=headers, json=data)
         print(f"Status Code: {response.status_code}")
         print(f"Response: {response.text}")
@@ -97,6 +97,16 @@ class SynapseManager:
         else:
             raise Exception("Falha ao listar usuários: " + response.json().get('error', 'Erro desconhecido'))
 
+    def list_rooms(self):
+        url = f"{self.base_url}/_synapse/admin/v1/rooms"
+        headers = self.get_headers()
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            rooms = response.json().get('rooms', [])
+            return rooms
+        else:
+            raise Exception("Falha ao listar salas: " + response.json().get('error', 'Erro desconhecido'))
+
     def change_password(self, user_id, new_password):
         url = f"{self.base_url}/_synapse/admin/v1/reset_password/{user_id}"
         headers = self.get_headers()
@@ -109,13 +119,3 @@ class SynapseManager:
         else:
             raise Exception("Falha ao alterar senha: " + response.json().get('error', 'Erro desconhecido'))
 
-    def get_access_token(self, username, password):
-        url = f'{self.base_url}/_matrix/client/r0/login'
-        payload = {
-            "type": "m.login.password",
-            "user": username,
-            "password": password
-        }
-        response = requests.post(url, json=payload)
-        data = response.json()
-        return data['access_token']

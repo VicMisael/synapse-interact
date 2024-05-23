@@ -42,13 +42,24 @@ class SynapseManager:
         else:
             raise Exception("Falha ao criar usuário: " + response.json().get('error', 'Erro desconhecido'))
 
+    def get_userinfo(self, userid):
+        url = f"{self.base_url}/_synapse/admin/v2/users/{userid}"
+        headers = self.get_headers()
+        response = requests.get(url, headers=headers)
+        # print(f"Status Code: {response.status_code}")
+        # print(f"Response: {response.text}")
+        if response.status_code == 200:
+            return response.json()
+        else:
+            raise Exception(f"Erro ao buscar usuários: {response.text}")
+
     def get_user_id_by_displayname(self, displayname):
         url = f"{self.base_url}/_synapse/admin/v2/users"
         headers = self.get_headers()
         params = {'name': displayname}
         response = requests.get(url, headers=headers, params=params)
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
+        # print(f"Status Code: {response.status_code}")
+        # print(f"Response: {response.text}")
         if response.status_code == 200:
             users = response.json().get('users', [])
             for user in users:

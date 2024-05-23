@@ -62,11 +62,23 @@ def deactivate(args):
 def new_room(args):
     config = Config.from_json_file()
     manager = matrix_interact.MatrixManager(config.base_url, args.access_token, config.shared_secret)
-    print(manager.create_room(args.name, args.preset, args.alias,args.description))
+    print(manager.create_room(args.name, args.preset, args.alias, args.description))
+
+
+def show_user_info(args):
+    config = Config.from_json_file()
+    manager = SynapseManager(config.base_url, args.access_token, config.shared_secret)
+    print(manager.get_userinfo(manager.get_user_id_by_displayname(args.username)))
+
+
+def new_password(args):
+    config = Config.from_json_file()
+    manager = SynapseManager(config.base_url, args.access_token, config.shared_secret)
+    user_id = manager.get_user_id_by_displayname(args.username)
+    print(manager.change_password(user_id, args.password))
 
 
 def main():
-    print("Synapse Interact")
     parser = argparse.ArgumentParser(prog="SynapseInteract", epilog="Thanks for using %(prog)s! :)",
                                      description='This application is a Simple Synapse Manager CLI Interface.')
     # Create a subparsers object
@@ -91,6 +103,17 @@ def main():
     create_parser.add_argument('-t', '--access_token', required=True, help="Enter your access Token")
     create_parser.set_defaults(func=create_user)
 
+    info_parser = subparsers.add_parser('info', help='Show user info')
+    info_parser.add_argument('-u', '--username', required=True, help="Enter the username")
+    info_parser.add_argument('-t', '--access_token', required=True, help="Enter your access Token")
+    info_parser.set_defaults(func=show_user_info)
+
+    change_password = subparsers.add_parser('change_password', help='Change password')
+    change_password.add_argument('-u', '--username', required=True, help="Enter the username")
+    change_password.add_argument('-p', '--password', required=True, help="Enter the password")
+    change_password.add_argument('-t', '--access_token', required=True, help="Enter your access Token")
+    change_password.set_defaults(func=new_password)
+
     list_users_parser = subparsers.add_parser('listusers', help='Create a new user')
     list_users_parser.add_argument('-t', '--access_token', required=True, help="Enter your access Token")
     list_users_parser.set_defaults(func=list_users)
@@ -100,7 +123,6 @@ def main():
     remove_user.add_argument("-e", "--erase", action=argparse.BooleanOptionalAction, required=False, help="Is admin?")
     remove_user.add_argument('-t', '--access_token', required=True, help="Enter your access Token")
     remove_user.set_defaults(func=deactivate)
-
 
     login = subparsers.add_parser('login',
                                   help='Generate your access token given the username and password on the config')
@@ -125,5 +147,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-    config = config.Config.from_json_file()
+
     # print(config.__dict__)

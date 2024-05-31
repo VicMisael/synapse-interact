@@ -1,9 +1,11 @@
 import requests
 import hmac
 import hashlib
+import json
+
 
 class SynapseManager:
-    def __init__(self,BaseUrl,AccessToken,SharedSecret):
+    def __init__(self, BaseUrl, AccessToken, SharedSecret):
         self.base_url = BaseUrl
         self.access_token = AccessToken
         self.shared_secret = SharedSecret
@@ -46,8 +48,6 @@ class SynapseManager:
         url = f"{self.base_url}/_synapse/admin/v2/users/{userid}"
         headers = self.get_headers()
         response = requests.get(url, headers=headers)
-        # print(f"Status Code: {response.status_code}")
-        # print(f"Response: {response.text}")
         if response.status_code == 200:
             return response.json()
         else:
@@ -69,7 +69,7 @@ class SynapseManager:
         else:
             raise Exception(f"Erro ao buscar usuários: {response.text}")
 
-    def deactivate_user(self, displayname,erase:bool):
+    def deactivate_user(self, displayname, erase: bool):
         user_id = self.get_user_id_by_displayname(displayname)
         print(f"User ID: {user_id}")
         if not user_id:
@@ -97,17 +97,6 @@ class SynapseManager:
         else:
             raise Exception("Falha ao listar usuários: " + response.json().get('error', 'Erro desconhecido'))
 
-    def list_quick_users(self):
-        url = f"{self.base_url}/_synapse/admin/v2/users"
-        headers = self.get_headers()
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            users = response.json().get('users', [])
-            quick_list = [{'username': user['name'], 'displayname': user.get('displayname', 'N/A')} for user in users]
-            return quick_list
-        else:
-            raise Exception("Falha ao listar usuários: " + response.json().get('error', 'Erro desconhecido'))
-
     def list_rooms(self):
         url = f"{self.base_url}/_synapse/admin/v1/rooms"
         headers = self.get_headers()
@@ -129,4 +118,3 @@ class SynapseManager:
             return "Senha alterada com sucesso."
         else:
             raise Exception("Falha ao alterar senha: " + response.json().get('error', 'Erro desconhecido'))
-

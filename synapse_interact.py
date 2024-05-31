@@ -1,5 +1,5 @@
 import argparse
-import config
+from beautifultable import BeautifulTable
 import matrix_interact
 from config import Config
 from synapse_manager import SynapseManager
@@ -43,13 +43,27 @@ def generate_config(args):
 def list_users(args):
     config = Config.from_json_file()
     manager = SynapseManager(config.base_url, args.access_token, config.shared_secret)
-    print(manager.list_users())
+    users = manager.list_users()
+    print_dict_list_as_table(users["users"])
 
 
 def list_rooms(args):
     config = Config.from_json_file()
     manager = SynapseManager(config.base_url, args.access_token, config.shared_secret)
-    print(manager.list_rooms())
+    roomlist = manager.list_rooms()
+    print_dict_list_as_table(roomlist)
+
+
+def print_dict_list_as_table(roomlist):
+    table = BeautifulTable()
+    headerCreated = False
+    for room in roomlist:
+        if not headerCreated:
+            table.columns.header = room
+            table.columns.width = 10
+            headerCreated = True
+        table.rows.append(room.values())
+    print(table)
 
 
 def deactivate(args):
@@ -68,7 +82,12 @@ def new_room(args):
 def show_user_info(args):
     config = Config.from_json_file()
     manager = SynapseManager(config.base_url, args.access_token, config.shared_secret)
-    print(manager.get_userinfo(manager.get_user_id_by_displayname(args.username)))
+    data = manager.get_userinfo(manager.get_user_id_by_displayname(args.username))
+    table = BeautifulTable()
+    table.columns.width = 30
+    for column in data:
+        table.rows.append([column, data[column]])
+    print(table)
 
 
 def new_password(args):
@@ -114,7 +133,7 @@ def main():
     change_password.add_argument('-t', '--access_token', required=True, help="Enter your access Token")
     change_password.set_defaults(func=new_password)
 
-    list_users_parser = subparsers.add_parser('listusers', help='Create a new user')
+    list_users_parser = subparsers.add_parser('list_users', help='Create a new user')
     list_users_parser.add_argument('-t', '--access_token', required=True, help="Enter your access Token")
     list_users_parser.set_defaults(func=list_users)
 
@@ -128,7 +147,7 @@ def main():
                                   help='Generate your access token given the username and password on the config')
     login.set_defaults(func=get_access_token)
 
-    list_room = subparsers.add_parser('listrooms', help='List all rooms ')
+    list_room = subparsers.add_parser('list_rooms', help='List all rooms ')
     list_room.add_argument('-t', '--access_token', required=True, help="Enter your access Token")
     list_room.set_defaults(func=list_rooms)
 

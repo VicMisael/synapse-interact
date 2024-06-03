@@ -1,4 +1,5 @@
 import json
+import os
 
 
 class Config(object):
@@ -21,8 +22,12 @@ class Config(object):
             },f)
 
     @classmethod
-    def from_json_file(cls, file_path: str = "config.json"):
+    def from_json_file(cls, file_path: str = "./config.json"):
         """Creates an instance of the class from a JSON file."""
         with open(file_path, 'r') as f:
             data = json.load(f)
             return cls(data['user_name'], data['password'], data['base_url'], data['shared_secret'])
+
+    @classmethod
+    def json_file_exists(cls, file_path: str = "./config.json"):
+        return os.path.exists(file_path)

@@ -10,7 +10,6 @@ def get_access_token(base_url, username, password):
     }
     response = requests.post(url, json=payload)
     data = response.json()
-    print(data)
     return data['access_token']
 
 

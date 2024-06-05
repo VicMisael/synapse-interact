@@ -1,4 +1,7 @@
 import requests
+from requests import Response
+
+from api.utils import utils
 
 
 def get_access_token(base_url, username, password):
@@ -8,9 +11,12 @@ def get_access_token(base_url, username, password):
         "user": username,
         "password": password
     }
-    response = requests.post(url, json=payload)
-    data = response.json()
-    return data['access_token']
+    return requests.post(url, json=payload)
+
+
+def whoami(base_url, access_token) -> Response:
+    url = f'{base_url}/_matrix/client/v3/account/whoami'
+    return requests.post(url, headers=utils.generate_bearer_header(access_token))
 
 
 class MatrixManager:
@@ -18,9 +24,6 @@ class MatrixManager:
         self.base_url = BaseUrl
         self.access_token = AccessToken
         self.shared_secret = SharedSecret
-
-    def get_headers(self):
-        return {'Authorization': f'Bearer {self.access_token}'}
 
     def create_room(self, name, preset, room_alias_name, topic):
         data = {
@@ -34,7 +37,7 @@ class MatrixManager:
         }
         url = f'{self.base_url}/_matrix/client/v3/createRoom'
         print(data)
-        response = requests.post(url, json=data, headers=self.get_headers())
+        response = requests.post(url, json=data, headers=utils.generate_bearer_header(self.access_token))
         if response.status_code == 200:
             return response.json()
         else:

@@ -2,9 +2,13 @@ import argparse
 import os.path
 
 from beautifultable import BeautifulTable
-import matrix_interact
+from requests import Response
+
+from api import matrix_interact
+from api.error.matrix_error import MatrixError
+from api.matrix_interact import whoami
 from config import Config
-from synapse_manager import SynapseManager
+from api.synapse_manager import SynapseManager
 import tempfile
 
 
@@ -31,16 +35,33 @@ import tempfile
 # Investigar Cargos KeyCloak(Gestão de Identidade)
 
 
-def get_access_token():
-    config = Config.from_json_file()
-    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-        if os.path.exists(temp_file.name):
-            return temp_file.read().decode()
-        else:
-            data = matrix_interact.get_access_token(config.base_url, config.user_name, config.password)
-            token: str = data.json()['access_token']
-            temp_file.write(token.encode())
-            return token
+def get_message(response: Response):
+    raise MatrixError.from_dict(response.json()).get_error_description()
+
+
+def check_access_token(config: Config, access_token: str):
+    print(whoami(config.base_url, access_token).json())
+
+
+def get_access_token(config: Config):
+    response = matrix_interact.get_access_token(config.base_url, config.user_name, config.password)
+    if response.ok:
+        print(response.json())
+        token: str = response.json()['access_token']
+        return token
+
+    raise MatrixError.from_dict(response.json())
+
+
+def login_user(args):
+    config: Config = Config.from_json_file()
+    try:
+        access_token = get_access_token(config)
+        check_access_token(config,access_token)
+    except MatrixError as e:
+        print(e.get_error_description())
+    except Exception as e:
+        print(e.args)
 
 
 def create_user(args):
@@ -149,7 +170,6 @@ def main():
         change_password.set_defaults(func=new_password)
 
         list_users_parser = subparsers.add_parser('list_users', help='Create a new user')
-        list_users_parser.add_argument('-t', '--access_token', required=True, help="Enter your access Token")
         list_users_parser.set_defaults(func=list_users)
 
         remove_user = subparsers.add_parser('remove_user', help='Create a new user')
@@ -162,10 +182,9 @@ def main():
 
         login = subparsers.add_parser('login',
                                       help='Generate your access token given the username and password on the config')
-        login.set_defaults(func=get_access_token)
+        login.set_defaults(func=login_user)
 
         list_room = subparsers.add_parser('list_rooms', help='List all rooms ')
-        list_room.add_argument('-t', '--access_token', required=True, help="Enter your access Token")
         list_room.set_defaults(func=list_rooms)
 
         create_room = subparsers.add_parser('create_room', help='Create a new room')

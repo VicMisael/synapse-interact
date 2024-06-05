@@ -3,6 +3,7 @@ import hmac
 import hashlib
 import json
 
+
 class SynapseManager:
     def __init__(self, BaseUrl, AccessToken, SharedSecret):
         self.base_url = BaseUrl

@@ -16,7 +16,7 @@ def get_access_token(base_url, username, password):
 
 def whoami(base_url, access_token) -> Response:
     url = f'{base_url}/_matrix/client/v3/account/whoami'
-    return requests.post(url, headers=utils.generate_bearer_header(access_token))
+    return requests.get(url, headers=utils.generate_bearer_header(access_token))
 
 
 class MatrixManager:

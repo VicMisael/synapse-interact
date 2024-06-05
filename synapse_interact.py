@@ -1,15 +1,9 @@
 import argparse
-import os.path
 
-from beautifultable import BeautifulTable
-from requests import Response
-
-from api import matrix_interact
-from api.error.matrix_error import MatrixError
-from api.matrix_interact import whoami
+from actions import generate_config, create_user, show_user_info, new_password, list_users, deactivate, whoami_action, \
+    list_rooms, new_room
+from api.error.matrix_error import MatrixException
 from config import Config
-from api.synapse_manager import SynapseManager
-import tempfile
 
 
 #  Gerência de usuários locais ok
@@ -33,104 +27,6 @@ import tempfile
 # Tratamento dos erros Matrix
 # SSO
 # Investigar Cargos KeyCloak(Gestão de Identidade)
-
-
-def get_message(response: Response):
-    raise MatrixError.from_dict(response.json()).get_error_description()
-
-
-def check_access_token(config: Config, access_token: str):
-    print(whoami(config.base_url, access_token).json())
-
-
-def get_access_token(config: Config):
-    response = matrix_interact.get_access_token(config.base_url, config.user_name, config.password)
-    if response.ok:
-        print(response.json())
-        token: str = response.json()['access_token']
-        return token
-
-    raise MatrixError.from_dict(response.json())
-
-
-def login_user(args):
-    config: Config = Config.from_json_file()
-    try:
-        access_token = get_access_token(config)
-        check_access_token(config,access_token)
-    except MatrixError as e:
-        print(e.get_error_description())
-    except Exception as e:
-        print(e.args)
-
-
-def create_user(args):
-    config = Config.from_json_file()
-    print(args)
-    manager = SynapseManager(config.base_url, get_access_token(), config.shared_secret)
-    print(manager.create_user(args.username, args.password, False if args.admin is None else args.admin))
-
-
-def generate_config(args):
-    config = Config(args.username, args.password, args.base_url, args.shared_secret)
-    config.save_to_json()
-
-
-def list_users(args):
-    config = Config.from_json_file()
-    manager = SynapseManager(config.base_url, get_access_token(), config.shared_secret)
-    users = manager.list_users()
-    print_dict_list_as_table(users["users"])
-
-
-def list_rooms(args):
-    config = Config.from_json_file()
-    manager = SynapseManager(config.base_url, get_access_token(), config.shared_secret)
-    roomlist = manager.list_rooms()
-    print_dict_list_as_table(roomlist)
-
-
-def print_dict_list_as_table(roomlist):
-    table = BeautifulTable()
-    headerCreated = False
-    for room in roomlist:
-        if not headerCreated:
-            table.columns.header = room
-            table.columns.width = 10
-            headerCreated = True
-        table.rows.append(room.values())
-    print(table)
-
-
-def deactivate(args):
-    config = Config.from_json_file()
-    manager = SynapseManager(config.base_url, get_access_token(), config.shared_secret)
-    print(args)
-    print(manager.deactivate_user(args.username, False if args.erase is None else args.erase))
-
-
-def new_room(args):
-    config = Config.from_json_file()
-    manager = matrix_interact.MatrixManager(config.base_url, get_access_token(), config.shared_secret)
-    print(manager.create_room(args.name, args.preset, args.alias, args.description))
-
-
-def show_user_info(args):
-    config = Config.from_json_file()
-    manager = SynapseManager(config.base_url, get_access_token(), config.shared_secret)
-    data = manager.get_userinfo(manager.get_user_id_by_displayname(args.username))
-    table = BeautifulTable()
-    table.columns.width = 30
-    for column in data:
-        table.rows.append([column, data[column]])
-    print(table)
-
-
-def new_password(args):
-    config = Config.from_json_file()
-    manager = SynapseManager(config.base_url, get_access_token(), config.shared_secret)
-    user_id = manager.get_user_id_by_displayname(args.username)
-    print(manager.change_password(user_id, args.password))
 
 
 def main():
@@ -180,9 +76,9 @@ def main():
 
         # Enable user
 
-        login = subparsers.add_parser('login',
-                                      help='Generate your access token given the username and password on the config')
-        login.set_defaults(func=login_user)
+        whoami = subparsers.add_parser('whoami',
+                                       help='Generate your access token given the username and password on the config')
+        whoami.set_defaults(func=whoami_action)
 
         list_room = subparsers.add_parser('list_rooms', help='List all rooms ')
         list_room.set_defaults(func=list_rooms)
@@ -195,9 +91,13 @@ def main():
         create_room.set_defaults(func=new_room)
     else:
         print("Config file not found, please generate with generate")
-    args = parser.parse_args()
+    try:
+        args = parser.parse_args()
 
-    args.func(args)
+        args.func(args)
+    except MatrixException as e:
+        print(e.get_error_description())
+        print(e.endpoint)
 
 
 if __name__ == "__main__":

@@ -85,7 +85,9 @@ def main():
 
         create_room = subparsers.add_parser('create_room', help='Create a new room')
         create_room.add_argument('-n', '--name', required=True, help="Enter the room name")
-        create_room.add_argument('-p', '--preset', required=True, help="Enter the room preset")
+        create_room.add_argument('-p', '--preset', required=True,
+                                 choices=['public_chat', 'private_chat', 'trusted_private_chat']
+                                 , help="Enter the room preset")
         create_room.add_argument('-d', '--description', required=True, help="Enter the description")
         create_room.add_argument('-a', '--alias', required=True, help="Enter the alais")
         create_room.set_defaults(func=new_room)
@@ -97,7 +99,7 @@ def main():
         args.func(args)
     except MatrixException as e:
         print(e.get_error_description())
-        print(e.endpoint)
+        print(f"Message:{e.error_message}")
 
 
 if __name__ == "__main__":

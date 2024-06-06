@@ -20,10 +20,10 @@ def whoami(base_url, access_token) -> Response:
 
 
 class MatrixManager:
-    def __init__(self, BaseUrl, AccessToken, SharedSecret):
-        self.base_url = BaseUrl
-        self.access_token = AccessToken
-        self.shared_secret = SharedSecret
+    def __init__(self, base_url, access_token, shared_secret):
+        self.base_url = base_url
+        self.access_token = access_token
+        self.shared_secret = shared_secret
 
     def create_room(self, name, preset, room_alias_name, topic):
         data = {
@@ -36,9 +36,5 @@ class MatrixManager:
             "topic": topic
         }
         url = f'{self.base_url}/_matrix/client/v3/createRoom'
-        print(data)
         response = requests.post(url, json=data, headers=utils.generate_bearer_header(self.access_token))
-        if response.status_code == 200:
-            return response.json()
-        else:
-            raise Exception("Falha ao criar salas: " + response.json().get('error', 'Erro desconhecido'))
+        return response

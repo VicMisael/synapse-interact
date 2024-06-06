@@ -1,12 +1,12 @@
 import json
 import os
 
-from api import matrix_interact
+from api.requests import matrix_interact
 from api.error.matrix_error import MatrixException
-from api.matrix_interact import whoami
+from api.requests.matrix_interact import whoami
 from config import Config
 from beautifultable import BeautifulTable
-from api.synapse_manager import SynapseManager
+from api.requests.synapse_manager import SynapseManager
 import tempfile
 
 
@@ -14,6 +14,7 @@ def check_access_token(config: Config, access_token: str) -> bool:
     result = whoami(config.base_url, access_token)
 
     return result.ok
+
 
 def generate_access_token(config: Config):
     response = matrix_interact.get_access_token(config.base_url, config.user_name, config.password)
@@ -33,7 +34,8 @@ def get_access_token(config: Config):
     if os.path.exists(temp_file_path):
         with open(temp_file_path, 'r') as temp_file:
             user_token_dict = json.load(temp_file)
-            if user_token_dict['user_name'] == config.user_name and check_access_token(config, user_token_dict['access_token']):
+            if user_token_dict['user_name'] == config.user_name and check_access_token(config,
+                                                                                       user_token_dict['access_token']):
                 return user_token_dict['access_token']
 
     token = generate_access_token(config)
@@ -48,7 +50,11 @@ def get_access_token(config: Config):
 def create_user(args):
     config = Config.from_json_file()
     manager = SynapseManager(config.base_url, get_access_token(config), config.shared_secret)
-    print(manager.create_user(args.username, args.password, False if args.admin is None else args.admin))
+    data = manager.create_user(args.username, args.password, False if args.admin is None else args.admin)
+    if data.ok:
+        print_dict_as_table(data.json())
+    else:
+        raise MatrixException.from_dict(data.json())
 
 
 def generate_config(args):
@@ -68,57 +74,72 @@ def whoami_action(args):
 def list_users(args):
     config = Config.from_json_file()
     manager = SynapseManager(config.base_url, get_access_token(config), config.shared_secret)
-    users = manager.list_users()
-    print_dict_list_as_table(users["users"])
+    response = manager.list_users()
+    if response.ok:
+        users = response.json()
+        print_dict_list_as_table(users["users"])
+    else:
+        raise MatrixException.from_dict(response.json())
 
 
 def list_rooms(args):
     config = Config.from_json_file()
     manager = SynapseManager(config.base_url, get_access_token(config), config.shared_secret)
     roomlist = manager.list_rooms()
-    print_dict_list_as_table(roomlist)
+    if roomlist.ok:
+        print_dict_list_as_table(roomlist.json()['rooms'])
+    else:
+        raise MatrixException.from_dict(roomlist.json())
 
 
 def deactivate(args):
     config = Config.from_json_file()
     manager = SynapseManager(config.base_url, get_access_token(config), config.shared_secret)
-    print(args)
-    print(manager.deactivate_user(args.username, False if args.erase is None else args.erase))
+    response = manager.deactivate_user(args.username, False if args.erase is None else args.erase)
+    if response.ok:
+        print("Successfully deactivated")
+    else:
+        raise MatrixException.from_dict(response.json())
 
 
 def new_room(args):
     config = Config.from_json_file()
-    manager = matrix_interact.MatrixManager(config.base_url, get_access_token(), config.shared_secret)
-    print(manager.create_room(args.name, args.preset, args.alias, args.description))
+    manager = matrix_interact.MatrixManager(config.base_url, get_access_token(config), config.shared_secret)
+    data = manager.create_room(args.name, args.preset, args.alias, args.description)
+    if data.ok:
+        print_dict_as_table(data.json())
+    else:
+        raise MatrixException.from_dict(data.json(), "Create Room")
 
 
 def show_user_info(args):
     config = Config.from_json_file()
-    manager = SynapseManager(config.base_url, get_access_token(), config.shared_secret)
-    data = manager.get_userinfo(manager.get_user_id_by_displayname(args.username))
-    table = BeautifulTable()
-    table.columns.width = 30
-    for column in data:
-        table.rows.append([column, data[column]])
-    print(table)
+    manager = SynapseManager(config.base_url, get_access_token(config), config.shared_secret)
+    response = manager.get_userinfo(manager.get_user_id_by_displayname(args.username))
+    if response.ok:
+        data = response.json()
+        print_dict_as_row_list(data)
+    else:
+        raise MatrixException.from_dict(response.json(), response.url)
+
 
 
 def new_password(args):
     config = Config.from_json_file()
-    manager = SynapseManager(config.base_url, get_access_token(), config.shared_secret)
+    manager = SynapseManager(config.base_url, get_access_token(config), config.shared_secret)
     user_id = manager.get_user_id_by_displayname(args.username)
     print(manager.change_password(user_id, args.password))
 
 
-def print_dict_list_as_table(roomlist):
+def print_dict_list_as_table(list):
     table = BeautifulTable()
     headerCreated = False
-    for room in roomlist:
+    for item in list:
         if not headerCreated:
-            table.columns.header = room
+            table.columns.header = item
             table.columns.width = 10
             headerCreated = True
-        table.rows.append(room.values())
+        table.rows.append(item.values())
     print(table)
 
 
@@ -127,4 +148,11 @@ def print_dict_as_table(dict):
     table.columns.width = 10
     table.rows.insert(0, dict.keys())
     table.rows.insert(1, dict.values())
+    print(table)
+
+def print_dict_as_row_list(dict):
+    table = BeautifulTable()
+    table.columns.width = 30
+    for column in dict:
+        table.rows.append([column, dict[column]])
     print(table)

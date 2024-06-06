@@ -14,7 +14,7 @@ class MatrixException(Exception):
         return cls(errcode, error_message)
 
     def get_error_description(self):
-        if  self.errcode in error_to_description.error_codes.keys():
+        if self.errcode in error_to_description.error_codes.keys():
             return error_to_description.error_codes[self.errcode]
         return str(self.__dict__)
 

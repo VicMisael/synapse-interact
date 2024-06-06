@@ -3,6 +3,8 @@ import hmac
 import hashlib
 import json
 
+from api.error.matrix_error import MatrixException
+
 
 class SynapseManager:
     def __init__(self, BaseUrl, AccessToken, SharedSecret):
@@ -38,36 +40,27 @@ class SynapseManager:
             "admin": admin,
             "mac": mac
         }
-        response = requests.post(url, headers=self.get_headers(), json=data)
-        if response.status_code == 200:
-            return "Usuário criado com sucesso."
-        else:
-            raise Exception("Falha ao criar usuário: " + response.json().get('error', 'Erro desconhecido'))
+        return requests.post(url, headers=self.get_headers(), json=data)
 
     def get_userinfo(self, userid):
         url = f"{self.base_url}/_synapse/admin/v2/users/{userid}"
         headers = self.get_headers()
         response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            raise Exception(f"Erro ao buscar usuários: {response.text}")
+        return response
 
     def get_user_id_by_displayname(self, displayname):
         url = f"{self.base_url}/_synapse/admin/v2/users"
         headers = self.get_headers()
         params = {'name': displayname}
         response = requests.get(url, headers=headers, params=params)
-        # print(f"Status Code: {response.status_code}")
-        # print(f"Response: {response.text}")
-        if response.status_code == 200:
+        if response.ok:
             users = response.json().get('users', [])
             for user in users:
                 if user.get('displayname', '').lower() == displayname.lower():
                     return user['name']
             return None
         else:
-            raise Exception(f"Erro ao buscar usuários: {response.text}")
+            raise MatrixException.from_dict(response.json())
 
     def deactivate_user(self, displayname, erase: bool):
         user_id = self.get_user_id_by_displayname(displayname)
@@ -79,33 +72,19 @@ class SynapseManager:
         headers = self.get_headers()
         data = {'erase': erase}
         response = requests.post(url, headers=headers, json=data)
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
-
-        if response.status_code in [200, 201]:
-            return "Usuário desativado com sucesso."
-        else:
-            error_msg = response.json().get('error', 'Erro desconhecido ao desativar usuário')
-            raise Exception(f"Falha ao desativar usuário: {error_msg}")
+        return response
 
     def list_users(self):
         url = f"{self.base_url}/_synapse/admin/v2/users"
         headers = self.get_headers()
         response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            return response.json()
-        else:
-            raise Exception("Falha ao listar usuários: " + response.json().get('error', 'Erro desconhecido'))
+        return response
 
     def list_rooms(self):
         url = f"{self.base_url}/_synapse/admin/v1/rooms"
         headers = self.get_headers()
         response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            rooms = response.json().get('rooms', [])
-            return rooms
-        else:
-            raise Exception("Falha ao listar salas: " + response.json().get('error', 'Erro desconhecido'))
+        return response
 
     def change_password(self, user_id, new_password):
         url = f"{self.base_url}/_synapse/admin/v1/reset_password/{user_id}"

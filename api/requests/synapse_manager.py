@@ -1,3 +1,5 @@
+import uuid
+
 import requests
 import hmac
 import hashlib
@@ -60,7 +62,8 @@ class SynapseManager:
                     return user['name']
             return None
         else:
-            raise MatrixException.from_dict(response.json())
+            raise MatrixException.from_dict(
+                response.json())
 
     def deactivate_user(self, displayname, erase: bool):
         user_id = self.get_user_id_by_displayname(displayname)
@@ -86,6 +89,51 @@ class SynapseManager:
         response = requests.get(url, headers=headers)
         return response
 
+    def get_room_details(self, room_id):
+        url = f"{self.base_url}/_synapse/admin/v1/rooms/{room_id}"
+
+        response = requests.get(url, headers=self.get_headers())
+        return response
+
+
+    def get_room_members(self, room_id):
+        url = f"{self.base_url}/_synapse/admin/v1/rooms/{room_id}/members"
+        try:
+            response = requests.get(url, headers=self.get_headers())
+            response.raise_for_status()
+            return response
+        except requests.exceptions.HTTPError as http_err:
+            return {"error": str(http_err)}
+        except Exception as err:
+            return {"error": str(err)}
+
+    def get_room_state(self, room_id):
+        url = f"{self.base_url}/_synapse/admin/v1/rooms/{room_id}/state"
+
+        response = requests.get(url, headers=self.get_headers())
+        response.raise_for_status()
+        return response
+
+    def block_room(self, room_id, block=True):
+        url = f"{self.base_url}/_synapse/admin/v1/rooms/{room_id}/block"
+        payload = {"block": block}
+
+        response = requests.put(url, headers=self.get_headers(), json=payload)
+
+        return response
+
+    def delete_room(self, room_id, new_room_user_id=None, room_name=None, message=None, block=True, purge=True):
+        url = f"{self.base_url}/_synapse/admin/v1/rooms/{room_id}"
+        payload = {
+            "new_room_user_id": new_room_user_id,
+            "room_name": room_name,
+            "message": message,
+            "block": block,
+            "purge": purge
+        }
+        response = requests.delete(url, headers=self.get_headers(), json=payload)
+        return response
+
     def change_password(self, user_id, new_password):
         url = f"{self.base_url}/_synapse/admin/v1/reset_password/{user_id}"
         headers = self.get_headers()
@@ -93,7 +141,4 @@ class SynapseManager:
             "new_password": new_password
         }
         response = requests.post(url, headers=headers, json=data)
-        if response.status_code == 200:
-            return "Senha alterada com sucesso."
-        else:
-            raise Exception("Falha ao alterar senha: " + response.json().get('error', 'Erro desconhecido'))
+        return response
